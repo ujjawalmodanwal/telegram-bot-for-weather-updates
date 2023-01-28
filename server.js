@@ -8,12 +8,12 @@ const latitude=28.6139;
 
 const bot = new Telegraf(process.env.BOT_API_TOKEN);
 bot.start((ctx) => {
-    let message = `Namaste, I am a bot to give you temperature update of New Delhi city, India!
+    let message = `I am a bot to give you temperature update of New Delhi city, India!
 Please use the /initiate command to receive temperature updates every hour!
 Type /revoke to stop receiving the updates!
 
 Thank you`;
-    ctx.reply(message);
+bot.telegram.sendMessage(ctx.chat.id, message);
 })
 
 
@@ -29,26 +29,26 @@ const handleInitiateRequest = async (ctx)=>{
         const time = timeStampOfUpdate.split("T")[1];
         const date = timeStampOfUpdate.split("T")[0];
         let updateMessage = `City: New Delhi \nTime: ${time} \nDate: ${date} \nTemperature: ${temperature}\n\n\n /revoke to stop receiveing updates!`;
-        ctx.reply(updateMessage);
+        bot.telegram.sendMessage(ctx.chat.id, updateMessage);
     } catch (error) {
-        ctx.reply('error getting data :(');
+        bot.telegram.sendMessage(ctx.chat.id, 'error getting data :(');
     }
 }
 
 bot.command('initiate',async (ctx) => {
-    ctx.reply(`Initiating temperature update service...`)
+    bot.telegram.sendMessage(ctx.chat.id, `Initiating temperature update service...`)
     handleInitiateRequest(ctx);    
-    timer = setInterval(async () => handleInitiateRequest(ctx), 3600000)  
+    timer = setInterval(async () => handleInitiateRequest(ctx), 3000)  
 });
 
 bot.command('revoke', async (ctx) => {
     if(timer){
         clearInterval(timer);
         timer=null;
-        ctx.reply('I have stopped the notification. \nYou can /initiate it anytime :)');
+        bot.telegram.sendMessage(ctx.chat.id, 'I have stopped the notification. \nYou can /initiate it anytime :)');
     }
     else{
-        ctx.reply('Sorry there is not active service! \nYou can /initiate receving temperature updates anytime :)');
+        bot.telegram.sendMessage(ctx.chat.id, 'Sorry there is not active service! \nYou can /initiate receving temperature updates anytime :)');
     }
 })
 

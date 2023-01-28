@@ -53,11 +53,6 @@ bot.command('revoke', async (ctx) => {
 })
 
 
-bot.launch({
-    webhook: {
-      domain: process.env.URL,
-      port: process.env.PORT
-    }
-  });
+bot.launch();
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))

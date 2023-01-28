@@ -38,7 +38,7 @@ const handleInitiateRequest = async (ctx)=>{
 bot.command('initiate',async (ctx) => {
     bot.telegram.sendMessage(ctx.chat.id, `Initiating temperature update service...`)
     handleInitiateRequest(ctx);    
-    timer = setInterval(async () => handleInitiateRequest(ctx), 3000)  
+    timer = setInterval(async () => handleInitiateRequest(ctx), 3600000)  
 });
 
 bot.command('revoke', async (ctx) => {

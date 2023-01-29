@@ -44,17 +44,26 @@ const postWeatherData = async(chatId)=>{
 const revokeWeatherUpdate = async(chatId) =>{
     clearInterval(timer);
     timer=null;
-    const updateMessage = `Service has been stopped. \nYou can /initiate it anytime :)`;
+    const revokeMessage = `Service has been stopped. \nYou can /initiate it anytime :)`;
     await axios.post(`${TELEGRAM_API}/sendMessage`, {
         chat_id: chatId,
-        text: updateMessage
+        text: revokeMessage
     })
 }
 
-
+const postWelcomeMessage = async (chatId)=>{
+    const welcomeMessage = `I am a bot. You can /initiate the service to get temperature update of New Delhi every hour.`
+    await axios.post(`${TELEGRAM_API}/sendMessage`, {
+        chat_id: chatId,
+        text: welcomeMessage
+    })
+}
 app.post(`/webhook/${process.env.BOT_API_TOKEN}`, async (req, res) => {
     const chatId = req.body.message.chat.id
     const text = req.body.message.text
+    if(text==='/start'){
+        postWelcomeMessage(chatId);
+    }
     if(text==='/initiate' && timer==null){
         postWeatherData(chatId);
         timer = setInterval(async () =>  postWeatherData(chatId), timeInterval)

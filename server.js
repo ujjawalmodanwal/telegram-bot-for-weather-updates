@@ -8,7 +8,7 @@ dotenv.config();
 //Coordinates of New Delhi;
 const longitude=77.2090;
 const latitude=28.6139;
-const timeInterval = 3600000;
+const timeInterval = 3000;
 
 
 //URLs

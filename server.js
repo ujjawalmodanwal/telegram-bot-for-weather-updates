@@ -1,58 +1,71 @@
-const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
 const axios = require('axios');
+const express = require('express');
+const bodyParser = require('body-parser');
 dotenv.config();
 
+
+//Coordinates of New Delhi;
 const longitude=77.2090;
 const latitude=28.6139;
-
-const bot = new Telegraf(process.env.BOT_API_TOKEN);
-bot.start((ctx) => {
-    let message = `I am a bot to give you temperature update of New Delhi city, India!
-Please use the /initiate command to receive temperature updates every hour!
-Type /revoke to stop receiving the updates!
-
-Thank you`;
-bot.telegram.sendMessage(ctx.chat.id, message);
-})
+const timeInterval = 3600000;
 
 
-     
+//URLs
+const TELEGRAM_API = `https://api.telegram.org/bot${process.env.BOT_API_TOKEN}`; //to send res to telegram server
+const POST_URL = `/webhook/${process.env.BOT_API_TOKEN}`
+const WEBHOOK_URL = `${process.env.PUBLIC_URL}${POST_URL}`; //to receive req at this public URL
+const WEATHER_API_URL =`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=auto`
 
+
+
+const app = express();
+app.use(bodyParser.json());
+const init = async () => {
+    const res = await axios.get(`${TELEGRAM_API}/setWebhook?url=${WEBHOOK_URL}`)
+}
 let timer = null;
 
-const handleInitiateRequest = async (ctx)=>{
-    try {
-        const weatherData = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&timezone=auto`);
-        const temperature = weatherData.data.current_weather.temperature;
-        const timeStampOfUpdate = weatherData.data.current_weather.time;
-        const time = timeStampOfUpdate.split("T")[1];
-        const date = timeStampOfUpdate.split("T")[0];
-        let updateMessage = `City: New Delhi \nTime: ${time} \nDate: ${date} \nTemperature: ${temperature}\n\n\n /revoke to stop receiveing updates!`;
-        bot.telegram.sendMessage(ctx.chat.id, updateMessage);
-    } catch (error) {
-        bot.telegram.sendMessage(ctx.chat.id, 'error getting data :(');
-    }
+const postWeatherData = async(chatId)=>{
+    const weatherData = await axios.get(WEATHER_API_URL);
+    const temperature = weatherData.data.current_weather.temperature;
+    const timeStampOfUpdate = weatherData.data.current_weather.time;
+    const time = timeStampOfUpdate.split("T")[1];
+    const date = timeStampOfUpdate.split("T")[0];
+    let updateMessage = `City: New Delhi \nTime: ${time} \nDate: ${date} \nTemperature: ${temperature}\n\n\n /revoke to stop receiveing updates!`;
+    await axios.post(`${TELEGRAM_API}/sendMessage`, {
+        chat_id: chatId,
+        text: updateMessage
+    })
 }
 
-bot.command('initiate',async (ctx) => {
-    bot.telegram.sendMessage(ctx.chat.id, `Initiating temperature update service...`)
-    handleInitiateRequest(ctx);    
-    timer = setInterval(async () => handleInitiateRequest(ctx), 3600000)  
-});
 
-bot.command('revoke', async (ctx) => {
-    if(timer){
-        clearInterval(timer);
-        timer=null;
-        bot.telegram.sendMessage(ctx.chat.id, 'I have stopped the notification. \nYou can /initiate it anytime :)');
+
+const revokeWeatherUpdate = async(chatId) =>{
+    clearInterval(timer);
+    timer=null;
+    const updateMessage = `Service has been stopped. \nYou can /initiate it anytime :)`;
+    await axios.post(`${TELEGRAM_API}/sendMessage`, {
+        chat_id: chatId,
+        text: updateMessage
+    })
+}
+
+
+app.post(`/webhook/${process.env.BOT_API_TOKEN}`, async (req, res) => {
+    const chatId = req.body.message.chat.id
+    const text = req.body.message.text
+    if(text==='/initiate' && timer==null){
+        postWeatherData(chatId);
+        timer = setInterval(async () =>  postWeatherData(chatId), timeInterval)
     }
-    else{
-        bot.telegram.sendMessage(ctx.chat.id, 'Sorry there is not active service! \nYou can /initiate receving temperature updates anytime :)');
+    if(text==='/revoke'){
+        revokeWeatherUpdate(chatId);
     }
+    return res.send()
 })
 
-
-bot.launch();
-process.once('SIGINT', () => bot.stop('SIGINT'))
-process.once('SIGTERM', () => bot.stop('SIGTERM'))
+app.listen(process.env.PORT || 5000, async () => {
+    console.log('app running on port', process.env.PORT || 5000)
+    await init()
+})
